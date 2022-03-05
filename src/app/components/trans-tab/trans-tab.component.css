@@ -1,0 +1,9 @@
+:host ::ng-deep  .p-datatable.p-datatable-striped .p-datatable-tbody > tr:nth-child(even) {
+    background: #efefef;
+}
+:host ::ng-deep  .p-frozen-column {
+    font-weight: bold;
+}
+:host ::ng-deep .p-datatable-frozen-tbody {
+    font-weight: bold;
+}

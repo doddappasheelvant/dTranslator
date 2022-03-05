@@ -1,0 +1,153 @@
+<p-toast></p-toast>
+
+<div class="grid">
+    <p-table #dt styleClass="p-datatable-sm p-datatable-striped p-datatable-gridlines" [columns]="cols"
+        [value]="translations" [globalFilterFields]="globalFilterKeys" [paginator]="true" [rows]="10"
+        [showCurrentPageReport]="true" [totalRecords]="totalRecords"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+        [rowsPerPageOptions]="[10,20,30]" editMode="row" dataKey="keyword" [(selection)]="selectedRows">
+        <ng-template pTemplate="caption">
+            <div class="p-d-flex flex justify-content-between flex-wrap">
+                <div>
+                    <button type="button" pButton pRipple icon="pi pi-file-o" (click)="exportJSON()" class="p-mr-2 mx-1"
+                        pTooltip="Export JSON" tooltipPosition="bottom"></button>
+                    <button type="button" pButton pRipple icon="pi pi-file-excel" (click)="exportExcel()"
+                        class="p-button-success ml-1 mr-4" pTooltip="Export XLS" tooltipPosition="bottom"></button>
+                    <button class="p-mr-2 mx-1" pButton label="Clear" class="p-button-outlined"
+                        icon="pi pi-filter-slash" (click)="clear(dt, $event.target)"></button>
+                    <span class="p-input-icon-left p-ml-auto mx-1">
+                        <i class="pi pi-search"></i>
+                        <input [(ngModel)]="filterText" pInputText type="text" class="p-inputtext p-component"
+                            (input)="dt.filterGlobal($event.target.value, 'contains')" placeholder="Search keyword" />
+                    </span>
+                    <button pButton pRipple label="Add Keyword" icon="pi pi-plus" class="p-button-primary p-mr-2"
+                        (click)="newRowAdd()"></button>
+                </div>
+                <div>
+                    <button type="button" [disabled]="!selectedLanguage.key" pButton pRipple label="Add Language"
+                        icon="pi" (click)="addColumn()"
+                        class="add-column-button p-button-icon p-button-icon-left p-mr-2 mx-1"></button>
+                    <p-dropdown class="lang-dropdown" [options]="languageList" [filter]="true" filterBy="label"
+                        placeholder="Select a Language" [(ngModel)]="selectedLanguage" optionLabel="label"></p-dropdown>
+                </div>
+            </div>
+            <div class="p-d-flex flex justify-content-between flex-wrap mb-1 mt-3">
+                <div>
+                    <button pButton pRipple label="Approve" class="p-button-primary p-mr-2"
+                        [disabled]='selectedRows.length === 0' (click)="multiApprove()">
+                    </button>
+                    <button pButton pRipple type="button" label="Translate"
+                        icon="pi pi-comments" class="p-button-rounded p-button-text"
+                        [disabled]='selectedRows.length === 0'>
+                    </button>
+                    <button pButton pRipple icon="pi pi-trash"
+                        class="p-button-rounded p-button-danger p-button-sm p-mr-2 mx-1"
+                        [disabled]="selectedRows.length === 0" (click)="deleteMultipleRows()">
+                    </button>
+                </div>
+            </div>
+        </ng-template>
+        <ng-template pTemplate="header" let-columns>
+            <tr>
+                <th class="w-3rem bg-bluegray-100">
+                    <p-tableHeaderCheckbox></p-tableHeaderCheckbox>
+                </th>
+                <th class="text-sm bg-bluegray-100 font-bold" *ngFor="let col of columns">
+                    <div class="flex align-items-center">
+                        <div class="bg-bluegray-100" [pSortableColumn]="col.field">
+                            <p-sortIcon class="px-2" [field]="col.field"></p-sortIcon>
+                            <span>{{col.header}}</span>
+                        </div>
+                        <p-fileUpload #headeFileUpload *ngIf="col.header!='Keyword' && col.header!='Status'"
+                            [auto]="true" accept="" mode="basic" [maxFileSize]="1000000" label="Import"
+                            class="p-d-inline-block mx-1 px-2"
+                            (onSelect)="onFileUpload($event.files, col.header, headeFileUpload)">
+                        </p-fileUpload>
+                        <button *ngIf="col.field!='keyword' && col.field!='en-us' && col.field!='status'" pButton
+                            pRipple icon="pi pi-trash" class="p-button-rounded p-button-primary p-button-sm"
+                            (click)="deleteColumn(col)"></button>
+                    </div>
+                </th>
+                <th class="text-sm w-6rem text-center font-bold bg-bluegray-100">
+                    {{"Edit"}}
+                </th>
+                <th class="text-sm w-6rem text-center font-bold bg-bluegray-100">
+                    {{"Translate"}}
+                </th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-value let-columns="columns" let-editing="editing" let-ri="rowIndex">
+            <tr [pEditableRow]="value">
+                <td class="w-3rem">
+                    <p-tableCheckbox [value]="value"></p-tableCheckbox>
+                </td>
+                <td *ngFor="let col of columns" class="text-sm">
+                    <p-cellEditor *ngIf="col.header!='Status' && col.header!='Keyword' && !value['status']">
+                        <ng-template pTemplate="input">
+                            <input pInputText type="text" [(ngModel)]="value[col.field]" required
+                                (focus)="showEditDialog(value,col.field)">
+                        </ng-template>
+                        <ng-template pTemplate="output">
+                            {{ value[col.field] }}
+                        </ng-template>
+                    </p-cellEditor>
+                    <ng-template [ngIf]="col.header=='Keyword' || (value['status'] && col.header!='Status')">
+                        {{ value[col.field] }}
+                    </ng-template>
+                    <p-toggleButton *ngIf="col.header=='Status'" [(ngModel)]="value.status" onLabel="Approved"
+                        offLabel="Not Approved" onIcon="pi pi-check" offIcon="pi pi-times" 
+                        [style]="{'backgroundColor':value.status?'green':'#fef0cd','width': '10em'}"
+                        (onChange)="handleChange()" [disabled]="!editing">
+                    </p-toggleButton>
+                </td>
+                <td class="w-6rem text-center">
+                    <button *ngIf="!editing" pButton pRipple type="button" pInitEditableRow icon="pi pi-pencil"
+                        (click)="onRowEditInit(value)" class="p-button-rounded p-button-text"></button>
+                    <button *ngIf="editing" pButton pRipple type="button" pSaveEditableRow icon="pi pi-check"
+                        (click)="onRowEditSave(value)"
+                        class="p-button-rounded p-button-text p-button-success p-mr-2"></button>
+                    <button *ngIf="editing" pButton pRipple type="button" pCancelEditableRow icon="pi pi-times"
+                        (click)="onRowEditCancel(value, ri)"
+                        class="p-button-rounded p-button-text p-button-danger"></button>
+                </td>
+                <td class="w-6rem text-center">
+                    <button pButton pRipple type="button" icon="pi pi-comments" [disabled]='value.status' (click)="getTranslatedData(value)"
+                        class="p-button-rounded p-button-text"></button>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+    <p-confirmDialog [style]="{width: '50vw'}" [baseZIndex]="10000"></p-confirmDialog>
+</div>
+
+<p-dialog [(visible)]="translationDialog" class="w-9" header="Enter Details" [modal]="true" styleClass="p-fluid">
+    <ng-template pTemplate="content">
+        <div *ngFor="let col of cols">
+            <div *ngIf="col.field!='status'">
+                <label [for]="col.field">{{ col.header }}</label>
+                <div>
+                    <textarea [rows]="5" [cols]="100" [autoResize]=true pInputTextarea [id]="col.field"
+                        [(ngModel)]="newRow[col.field]"></textarea>
+                    <small class="p-error"
+                        *ngIf="submitted && ((!newRow.keyword &&  col.field=='keyword' ) || (!newRow['en-us'] && col.field=='en-us'))">
+                        This cannot be Empty
+                    </small>
+                </div>
+            </div>
+            <br><br>
+        </div>
+    </ng-template>
+    <ng-template pTemplate="footer">
+        <button pButton pRipple label="Cancel" icon="pi pi-times" class="p-button-text" (click)="hideDialog()"></button>
+        <button pButton pRipple label="Save" icon="pi pi-check" class="p-button-text" (click)="saveRow()"></button>
+    </ng-template>
+</p-dialog>
+
+<p-dialog [header]="editRowData['header']" [(visible)]="editFlag" class="w-30rem">
+    <textarea pInputTextarea [(ngModel)]="editRowData['value']"></textarea>
+    <ng-template pTemplate="footer">
+        <button pButton pRipple label="Cancel" icon="pi pi-times" class="p-button-text"
+            (click)="editRowCancel()"></button>
+        <button pButton pRipple label="Save" icon="pi pi-check" class="p-button-text" (click)="editRowSave()"></button>
+    </ng-template>
+</p-dialog>

@@ -1,0 +1,7 @@
+:host ::ng-deep  .card .blue-container .navbar-font-family{
+    font-family: sans-serif;
+}
+
+.bg-red-nav{
+    background-color: #587c29;
+}
